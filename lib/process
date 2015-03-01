@@ -1,0 +1,185 @@
+/**
+ * Written by Tomas Kirnak
+ *
+ * This lib provides functions related to monitoring OS processes.
+ */
+
+/**
+ * Find the process's OID suffix based on processName using searchType.
+ * 
+ * Parameters:
+ *   transport - SNMP transport to the desired node
+ *   processName - process name to search for
+ *   searchType - optional - "partial" or "full" string matching
+ *              - "full" - default - the string must match completly
+ *              - "partial" - matches if the search string is present anywhere in the searched string
+ *
+ * Returns:
+ *   Success - oid suffix string
+ *   Failure - null
+ */
+sub _getProcessSuffix(transport, processName, searchType)
+{
+	// if searchType not defined as "partial", default to full
+	if (searchType != "partial")
+		searchType = "full";
+
+	// this is the OID of the process hrSWRunName table
+	processTable = ".1.3.6.1.2.1.25.4.2.1.2";
+
+	// walk the process table
+	varbinds = SNMPWalk(transport, processTable);
+	if (varbinds == null)
+		return null;
+
+	// use proper functions depending on if processName is an array
+	if (typeof(processName) == "array")
+	{
+		foreach (process : processName)
+		{
+			processSuffix = __findProcessSuffix(searchType, varbinds, process);
+			if (processSuffix != null)
+				return processSuffix;; // to return first found process
+		}
+	}
+	else
+	{
+		processSuffix = __findProcessSuffix(searchType, varbinds, processName);
+		if (processSuffix != null)
+				return processSuffix;
+	}
+
+	// the requested process name was not found
+	return null;
+}
+
+/**
+ * Find the process instance count based on processName using searchType.
+ * 
+ * Parameters:
+ *   transport - SNMP transport to the desired node
+ *   processName - process name to count
+ *   searchType - optional - "partial" or "full" string matching
+ *              - "full" - default - the string must match completly
+ *              - "partial" - matches if the search string is present anywhere in the searched string
+ *
+ * Returns:
+ *   Success - count of process instances
+ *   Failure - null
+ */
+sub _getProcessCount(transport, processName, searchType)
+{
+	// if searchType not defined as "partial", default to full
+	if (searchType != "partial")
+		searchType = "full";
+
+	// this is the OID of the process hrSWRunName table
+	processTable = ".1.3.6.1.2.1.25.4.2.1.2";
+
+	// walk the process table
+	varbinds = SNMPWalk(transport, processTable);
+	if (varbinds == null)
+		return null;
+
+	// pre-set the count variable
+	totalCount = 0;
+
+	// use proper functions depending on if processName is an array
+	if (typeof(processName) == "array")
+	{
+		foreach (process : processName)
+		{
+			processCount = __findProcessCount(searchType, varbinds, process);
+			totalCount = totalCount + processCount;
+		}
+	}
+	else
+	{
+		processCount = __findProcessCount(searchType, varbinds, processName);
+		totalCount = processCount;
+	}
+	
+	if (totalCount != 0)
+	{
+		// return total count of the process instances
+		return totalCount;
+	}
+	else
+	{
+		// the requested process was not found
+		return null;
+	}
+}
+
+// support functions
+
+/**
+ * Find a process by name in a VarBind array using searchType.
+ * 
+ * Parameters:
+ *   searchType - "partial" or "full" string matching
+ *   varbinds - VarBind array
+ *   processName - process name to search for
+ *
+ * Returns:
+ *   Success - oid suffix string
+ *   Failure - null
+ */
+sub __findProcessSuffix(searchType, varbinds, processName)
+{
+	foreach (vb : varbinds)
+	{
+		if ((searchType == "partial"))
+		{
+			if (index(vb->value, processName))
+			{
+				processSuffix = right(vb->name, (length(vb->name) - rindex(vb->name, ".")));
+				return processSuffix;
+			}
+		}
+
+		if ((searchType == "full"))
+		{
+			if (vb->value == processName)
+			{
+				processSuffix = right(vb->name, (length(vb->name) - rindex(vb->name, ".")));
+				return processSuffix;
+			}
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Count a process by name in a VarBind array using searchType.
+ * 
+ * Parameters:
+ *   searchType - "partial" or "full" string matching
+ *   varbinds - VarBind array
+ *   processName - process name to search for
+ *
+ * Returns:
+ *   Count of process instances
+ */
+sub __findProcessCount(searchType, varbinds, processName)
+{
+	processCount = 0;
+
+	foreach (vb : varbinds)
+	{
+		if ((searchType == "partial"))
+		{
+			if (index(vb->value, processName))
+				processCount = processCount + 1;
+		}
+
+		if ((searchType == "full"))
+		{
+			if (vb->value == processName)
+				processCount = processCount + 1;
+		}
+	}
+
+	return processCount;
+}
