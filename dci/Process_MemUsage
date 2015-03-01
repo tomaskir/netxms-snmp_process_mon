@@ -28,6 +28,7 @@ sub main()
 	if (process_memRawSize == null)
 		return returnError;
 
-	// return mem usage in megabytes
+	// return process mem usage in bytes
+	// hrSWRunPerfMem returns in kilobytes
 	return (process_memRawSize * 1024);
 }
