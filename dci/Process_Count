@@ -1,0 +1,28 @@
+use lib::process;
+
+sub main()
+{
+	// assign received arguments into variables
+	processName = $1;
+	searchType = $2;
+
+	// internal variables
+	returnError = 0;
+
+	// input argument error checking
+	if ((processName == "") || (processName == null))
+		return returnError;
+
+	// create SNMP Transport
+	transport = CreateSNMPTransport($node);
+	if (transport == null)
+		return returnError;
+
+	// get the count of process instances
+	processCount = _getProcessCount(transport, processName, searchType);
+	if (processCount == null)
+		return returnError;
+
+	// return the process instance count
+	return processCount;
+}

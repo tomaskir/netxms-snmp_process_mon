@@ -1,0 +1,33 @@
+use lib::process;
+
+sub main()
+{
+	// assign received arguments into variables
+	processName = $1;
+	searchType = $2;
+
+	// internal variables
+	returnError = 0;
+
+	// input argument error checking
+	if ((processName == "") || (processName == null))
+		return returnError;
+
+	// create SNMP Transport
+	transport = CreateSNMPTransport($node);
+	if (transport == null)
+		return returnError;
+
+	// get the OID suffix of the process
+	processSuffix = _getProcessSuffix(transport, processName, searchType);
+	if (processSuffix == null)
+		return returnError;
+
+	// get the raw mem usage of this process
+	process_memRawSize = SNMPGetValue(transport, ".1.3.6.1.2.1.25.5.1.1.2." . processSuffix);
+	if (process_memRawSize == null)
+		return returnError;
+
+	// return mem usage in megabytes
+	return (process_memRawSize * 1024);
+}
